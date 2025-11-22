@@ -8,8 +8,16 @@ if (empty($query)) {
     exit;
 }
 
-$cmd ='sudo python3 download_system.py ' . escapeshellarg($query) . ' > /dev/null 2>&1 &';
-exec($cmd);
+$logFile = __DIR__ . "/logs/download.log";
+$cmd = "python3 " . __DIR__ . "/download_system.py "
+     . escapeshellarg($query)
+     . " >> " . escapeshellarg($logFile) . " 2>&1 &";
 
-echo json_encode(['success' => true, 'message' => 'Đang tải...']);
-?>
+exec($cmd, $output, $returnVar);
+
+echo json_encode([
+    'success' => true,
+    'message' => 'Download started',
+    'log' => $logFile
+]);
+exit;
