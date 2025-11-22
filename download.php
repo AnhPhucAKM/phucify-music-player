@@ -8,7 +8,7 @@ if (empty($query)) {
     exit;
 }
 
-$cmd = sudo 'python3 download_system.py ' . escapeshellarg($query) . ' > /dev/null 2>&1 &';
+$cmd ='sudo python3 download_system.py ' . escapeshellarg($query) . ' > /dev/null 2>&1 &';
 exec($cmd);
 
 echo json_encode(['success' => true, 'message' => 'Đang tải...']);
