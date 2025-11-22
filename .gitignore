@@ -1,0 +1,6 @@
+audio/*.mp3
+covers/*.jpg
+.download.lock
+audio/download.log
+cookies.txt
+playlists.json
