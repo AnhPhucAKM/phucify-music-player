@@ -27,7 +27,15 @@ $pythonScript = __DIR__ . "/download_system.py";
 $pythonPath = trim(shell_exec('which python3 2>/dev/null')) ?: 'python3';
 
 // Make executable
-chmod($pythonScript, 0755);
+@chmod($pythonScript, 0755);
+
+// Verify script is readable
+if (!is_readable($pythonScript)) {
+    $msg = "ERROR: Script not readable";
+    file_put_contents($logFile, "[$timestamp] $msg\n", FILE_APPEND);
+    echo json_encode(['success' => false, 'message' => $msg]);
+    exit;
+}
 
 // Dùng nohup để chạy background đúng cách
 // Redirect stderr vào log file
