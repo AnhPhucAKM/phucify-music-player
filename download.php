@@ -13,4 +13,3 @@ exec($cmd);
 
 echo json_encode(['success' => true, 'message' => 'Đang tải...']);
 ?>
-EOF
