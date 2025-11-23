@@ -129,36 +129,46 @@ body {
     word-break: break-word;
 }
 
-/* Disk actions */
+/* Disk actions - UPDATED */
 .disk-actions {
     position: absolute;
     top: 8px;
     right: 8px;
     display: flex;
     gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.disk:hover .disk-actions {
+    opacity: 1;
 }
 
 .add-btn,
 .remove-btn {
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.8);
     color: #fff;
     border: none;
-    padding: 4px 6px;
+    padding: 6px 8px;
     cursor: pointer;
     border-radius: 6px;
     font-size: 14px;
+    transition: all 0.2s;
+}
+
+.add-btn:hover {
+    background: #1DB954;
+    transform: scale(1.1);
+}
+
+.remove-btn:hover {
+    background: #e74c3c;
+    transform: scale(1.1);
+}
+
+/* Trong playlist: chỉ hiện nút Remove */
+.grid.playlist-active .add-btn {
     display: none;
-}
-
-.disk:hover .add-btn,
-.disk:hover .remove-btn {
-    display: block;
-}
-
-.remove-btn { display: none; }
-
-.playlist-active .remove-btn {
-    display: block !important;
 }
 
 /* ===============================
@@ -336,7 +346,6 @@ body {
     display: flex;
 }
 
-/* Spinner xoay tròn */
 .download-spinner {
     width: 40px;
     height: 40px;
@@ -346,7 +355,6 @@ body {
     animation: spin 1s linear infinite;
 }
 
-/* Icon success/error */
 .download-icon {
     font-size: 36px;
     display: none;
@@ -574,7 +582,6 @@ body {
     color: var(--text-light);
 }
 
-/* Animations */
 @keyframes fadeInBackdrop {
     from { opacity: 0; }
     to { opacity: 1; }
