@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎵 Phucify — Player</title>
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -23,7 +23,9 @@
         <?php endforeach; ?>
     </ul>
 </div>
+
 <button id="mobileMenuBtn">☰ Playlist</button>
+
 <div class="main">
     <div class="grid" id="diskGrid">
         <?php
@@ -64,7 +66,7 @@
     </div>
 </div>
 
-<!-- Progress Bar - FIXED -->
+<!-- Progress Bar -->
 <div class="progress-container" onclick="seek(event)">
     <div id="progressBar" class="progress"></div>
 </div>
@@ -100,6 +102,7 @@
         </button>
     </div>
 </div>
+
 <div id="toastContainer"></div>
 
 <!-- Download Status Card -->
@@ -109,6 +112,7 @@
     <div class="download-icon error">✕</div>
 </div>
 
+<!-- Create Playlist Modal -->
 <div id="createPlaylistModal" class="modal">
     <div class="modal-content create-modal">
         <span class="close" id="closeCreateModal">&times;</span>
@@ -117,6 +121,19 @@
         <div class="modal-buttons">
             <button id="createPlaylistConfirm" class="btn">Tạo</button>
             <button id="createPlaylistCancel" class="btn cancel">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm Dialog -->
+<div id="confirmDialog" class="confirm-overlay">
+    <div class="confirm-dialog">
+        <div id="confirmIcon" class="confirm-icon warning">⚠️</div>
+        <div id="confirmTitle" class="confirm-title">Xác nhận</div>
+        <div id="confirmMessage" class="confirm-message">Bạn có chắc chắn muốn thực hiện hành động này?</div>
+        <div class="confirm-buttons">
+            <button id="confirmCancel" class="confirm-btn secondary">Hủy</button>
+            <button id="confirmOk" class="confirm-btn danger">Xác nhận</button>
         </div>
     </div>
 </div>
