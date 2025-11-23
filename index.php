@@ -34,18 +34,18 @@
             $file = basename($f);
             $name = pathinfo($file, PATHINFO_FILENAME);
             $songsMeta[$file] = [
-                'path' => "audio/{$file}",
+                'path' => getAudioPath($file),  // Sử dụng hàm encode
                 'title' => $name,
                 'cover' => getCover($file)
             ];
         ?>
-        <div class="disk" data-file="<?= $file ?>" onclick="playSong('audio/<?= $file ?>', this)">
+        <div class="disk" data-file="<?= htmlspecialchars($file, ENT_QUOTES) ?>" onclick="playSong('<?= htmlspecialchars($file, ENT_QUOTES) ?>', this)">
             <img src="<?= getCover($file) ?>" alt="">
             <p><?= htmlspecialchars($name) ?></p>
 
             <div class="disk-actions">
-                <button class="add-btn" onclick="event.stopPropagation(); openAddToPlaylist('<?= $file ?>')">➕</button>
-                <button class="remove-btn" onclick="event.stopPropagation(); removeFromPlaylist('<?= $file ?>')">✖</button>
+                <button class="add-btn" onclick="event.stopPropagation(); openAddToPlaylist('<?= htmlspecialchars($file, ENT_QUOTES) ?>')">➕</button>
+                <button class="remove-btn" onclick="event.stopPropagation(); removeFromPlaylist('<?= htmlspecialchars($file, ENT_QUOTES) ?>')">✖</button>
             </div>
         </div>
         <?php } ?>
