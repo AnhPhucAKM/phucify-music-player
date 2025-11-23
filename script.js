@@ -11,7 +11,59 @@ const SONGS_META = window.SONGS_META || {};
 let PLAYLISTS = window.PLAYLISTS || {};
 
 // =============================
-// PLAYER — FIXED + SHUFFLE
+// CUSTOM CONFIRM DIALOG
+// =============================
+
+function showConfirm(options) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('confirmDialog');
+        const icon = document.getElementById('confirmIcon');
+        const title = document.getElementById('confirmTitle');
+        const message = document.getElementById('confirmMessage');
+        const okBtn = document.getElementById('confirmOk');
+        const cancelBtn = document.getElementById('confirmCancel');
+        
+        title.textContent = options.title || 'Xác nhận';
+        message.textContent = options.message || 'Bạn có chắc chắn?';
+        icon.className = 'confirm-icon ' + (options.type || 'warning');
+        icon.textContent = options.icon || '⚠️';
+        okBtn.textContent = options.confirmText || 'Xác nhận';
+        cancelBtn.textContent = options.cancelText || 'Hủy';
+        okBtn.className = 'confirm-btn ' + (options.confirmClass || 'danger');
+        
+        overlay.classList.add('show');
+        
+        const handleOk = () => {
+            cleanup();
+            resolve(true);
+        };
+        
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+        
+        const cleanup = () => {
+            overlay.classList.remove('show');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlayClick);
+        };
+        
+        const handleOverlayClick = (e) => {
+            if (e.target === overlay) {
+                handleCancel();
+            }
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlayClick);
+    });
+}
+
+// =============================
+// PLAYER
 // =============================
 
 function playSong(filename, element = null) {
@@ -170,6 +222,12 @@ function openAddToPlaylist(file) {
     chosenFile = file;
 
     const list = Object.keys(PLAYLISTS).filter(x => x !== "Tất cả nhạc");
+    
+    if (list.length === 0) {
+        showToast("Chưa có playlist nào! Hãy tạo playlist trước.", "info");
+        return;
+    }
+    
     const container = document.getElementById("playlistChoices");
 
     container.innerHTML = list.map(name => `
@@ -185,7 +243,10 @@ function closePlaylistModal() {
 
 document.getElementById("addToPlaylistConfirm").onclick = async function () {
     const checks = [...document.querySelectorAll("#playlistChoices input:checked")];
-    if (checks.length === 0) return showToast("Chọn ít nhất 1 playlist!", "info");
+    if (checks.length === 0) {
+        showToast("Chọn ít nhất 1 playlist!", "info");
+        return;
+    }
 
     for (const c of checks) {
         await fetch("playlist.php", {
@@ -198,40 +259,39 @@ document.getElementById("addToPlaylistConfirm").onclick = async function () {
         });
     }
 
-    showToast("Đã thêm bài vào playlist!");
+    showToast("✓ Đã thêm bài vào playlist!", "success");
     closePlaylistModal();
     reloadPlaylists();
 };
 
-// UPDATED: removeFromPlaylist với logic mới
 async function removeFromPlaylist(file) {
     const active = document.querySelector(".playlist-item.selected");
     if (!active) return;
 
     const playlist = active.textContent.split("(")[0].trim();
     
-    // Nếu đang ở "Tất cả nhạc" → XÓA FILE KHỎI SERVER
     if (playlist === "Tất cả nhạc") {
-        if (!confirm(`⚠️ XÓA VĨNH VIỄN bài "${file}" khỏi server?\n\nHành động này không thể hoàn tác!`)) {
-            return;
-        }
+        const confirmed = await showConfirm({
+            title: '🗑️ Xóa vĩnh viễn?',
+            message: `Bạn có chắc chắn muốn XÓA VĨNH VIỄN bài "${file}" khỏi server?\n\nHành động này không thể hoàn tác!`,
+            icon: '🗑️',
+            type: 'warning',
+            confirmText: 'Xóa',
+            confirmClass: 'danger'
+        });
+        
+        if (!confirmed) return;
         
         const res = await fetch("delete_file.php", {
             method: "POST",
-            body: new URLSearchParams({
-                file: file
-            })
+            body: new URLSearchParams({ file: file })
         });
         
         const j = await res.json();
         
         if (j.success) {
             showToast("✓ Đã xóa file khỏi server", "success");
-            
-            // Xóa khỏi SONGS_META
             delete SONGS_META[file];
-            
-            // Reload trang sau 1s
             setTimeout(() => location.reload(), 1000);
         } else {
             showToast("✗ " + (j.message || "Lỗi xóa file"), "error");
@@ -240,8 +300,16 @@ async function removeFromPlaylist(file) {
         return;
     }
     
-    // Nếu đang ở playlist khác → CHỈ XÓA KHỎI PLAYLIST
-    if (!confirm(`Xóa "${file}" khỏi playlist "${playlist}"?`)) return;
+    const confirmed = await showConfirm({
+        title: '➖ Xóa khỏi playlist?',
+        message: `Xóa "${file}" khỏi playlist "${playlist}"?`,
+        icon: '➖',
+        type: 'info',
+        confirmText: 'Xóa',
+        confirmClass: 'primary'
+    });
+    
+    if (!confirmed) return;
 
     const res = await fetch("playlist.php", {
         method: "POST",
@@ -268,13 +336,9 @@ async function removeFromPlaylist(file) {
 
 function showToast(message, type = "success") {
     const box = document.createElement("div");
-    box.className = "toast " +
-        (type === "error" ? "error" :
-         type === "info" ? "info" : "");
+    box.className = "toast " + (type === "error" ? "error" : type === "info" ? "info" : "");
     box.textContent = message;
-
     document.getElementById("toastContainer").appendChild(box);
-
     setTimeout(() => box.remove(), 3500);
 }
 
@@ -285,9 +349,7 @@ function showToast(message, type = "success") {
 document.addEventListener("keydown", function (e) {
     const tag = document.activeElement.tagName.toLowerCase();
     if (tag === "input" || tag === "textarea") return;
-
     if (document.getElementById("youtubeModal").style.display === "flex") return;
-
     if (e.code === "Space") {
         e.preventDefault();
         togglePlay();
@@ -321,31 +383,31 @@ function closeCreateModal() {
 
 document.getElementById("createPlaylistConfirm").onclick = async function () {
     const name = document.getElementById("newPlaylistName").value.trim();
-    if (!name) return showToast("Tên playlist không hợp lệ", "error");
+    
+    if (!name) {
+        showToast("⚠️ Tên playlist không hợp lệ", "error");
+        return;
+    }
 
     const res = await fetch("playlist.php", {
         method: "POST",
-        body: new URLSearchParams({
-            action: "create",
-            playlist: name
-        })
+        body: new URLSearchParams({ action: "create", playlist: name })
     });
 
     const j = await res.json();
     if (j.success) {
         await reloadPlaylists();
         rebuildPlaylistList();
-        showToast("Tạo playlist thành công", "success");
+        showToast("✓ Tạo playlist thành công", "success");
         closeCreateModal();
     } else {
-        showToast(j.message || "Lỗi tạo playlist", "error");
+        showToast("✗ " + (j.message || "Lỗi tạo playlist"), "error");
     }
 };
 
 function rebuildPlaylistList() {
     const list = document.getElementById("playlistList");
     list.innerHTML = "";
-
     Object.keys(PLAYLISTS).forEach(name => {
         const li = document.createElement("li");
         li.className = "playlist-item" + (name === "Tất cả nhạc" ? " selected" : "");
@@ -356,7 +418,7 @@ function rebuildPlaylistList() {
 }
 
 // =============================
-// DOWNLOAD STATUS CARD
+// DOWNLOAD STATUS
 // =============================
 
 let downloadCheckInterval = null;
@@ -367,30 +429,20 @@ function showDownloadCard(status = 'loading') {
     const successIcon = card.querySelector('.download-icon.success');
     const errorIcon = card.querySelector('.download-icon.error');
     
-    // Reset
     spinner.style.display = 'none';
     successIcon.style.display = 'none';
     errorIcon.style.display = 'none';
-    
     card.classList.add('show');
     
     if (status === 'loading') {
         spinner.style.display = 'block';
     } else if (status === 'success') {
         successIcon.style.display = 'block';
-        setTimeout(() => {
-            card.classList.remove('show');
-        }, 3000);
+        setTimeout(() => card.classList.remove('show'), 3000);
     } else if (status === 'error') {
         errorIcon.style.display = 'block';
-        setTimeout(() => {
-            card.classList.remove('show');
-        }, 3000);
+        setTimeout(() => card.classList.remove('show'), 3000);
     }
-}
-
-function hideDownloadCard() {
-    document.getElementById('downloadStatusCard').classList.remove('show');
 }
 
 async function checkDownloadStatus() {
@@ -399,39 +451,27 @@ async function checkDownloadStatus() {
         const data = await res.json();
         
         if (!data.isDownloading && data.status === 'success') {
-            // Download xong
             clearInterval(downloadCheckInterval);
             showDownloadCard('success');
             showToast(`✓ Đã tải xong: ${data.title}`, 'success');
-            
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-            
+            setTimeout(() => location.reload(), 2000);
         } else if (!data.isDownloading && data.status === 'failed') {
-            // Download thất bại
             clearInterval(downloadCheckInterval);
             showDownloadCard('error');
             showToast(`✗ Tải thất bại: ${data.title}`, 'error');
         }
-        
     } catch (err) {
         console.error('Error checking download status:', err);
     }
 }
 
 function startDownloadMonitor() {
-    // Clear interval cũ nếu có
-    if (downloadCheckInterval) {
-        clearInterval(downloadCheckInterval);
-    }
-    
-    // Kiểm tra mỗi 3 giây
+    if (downloadCheckInterval) clearInterval(downloadCheckInterval);
     downloadCheckInterval = setInterval(checkDownloadStatus, 3000);
 }
 
 // =============================
-// YOUTUBE SEARCH MODAL
+// YOUTUBE SEARCH
 // =============================
 
 document.getElementById("openYoutubeSearch").onclick = () => {
@@ -445,7 +485,11 @@ document.querySelector(".close").onclick = () => {
 document.getElementById("searchForm").onsubmit = async function (e) {
     e.preventDefault();
     const query = document.getElementById("searchQuery").value.trim();
-    if (!query) return showToast("Nhập từ khóa tìm kiếm", "info");
+    
+    if (!query) {
+        showToast("⚠️ Nhập từ khóa tìm kiếm", "info");
+        return;
+    }
 
     const container = document.getElementById("searchResults");
     container.innerHTML = '<p style="text-align:center;color:#aaa;padding:20px;">Đang tìm kiếm...</p>';
@@ -459,7 +503,6 @@ document.getElementById("searchForm").onsubmit = async function (e) {
 
         if (results.error) {
             container.innerHTML = `<p style="color:#e74c3c;text-align:center;padding:20px;">Lỗi: ${results.error}</p>`;
-            console.error('YouTube Search Error:', results);
             return;
         }
 
@@ -470,8 +513,7 @@ document.getElementById("searchForm").onsubmit = async function (e) {
 
         container.innerHTML = results.map(r => `
             <div class="result-item" onclick="downloadVideo('${r.id}')">
-                <img src="${r.thumbnail}" 
-                     alt="${r.title}" 
+                <img src="${r.thumbnail}" alt="${r.title}" 
                      style="width:100%;height:180px;object-fit:cover;border-radius:8px 8px 0 0;"
                      onerror="this.src='https://via.placeholder.com/320x180?text=No+Image'">
                 <div style="padding:12px;">
@@ -480,41 +522,32 @@ document.getElementById("searchForm").onsubmit = async function (e) {
                 </div>
             </div>
         `).join("");
-        
     } catch (err) {
         container.innerHTML = `<p style="color:#e74c3c;text-align:center;padding:20px;">Lỗi: ${err.message}</p>`;
-        console.error('Fetch error:', err);
     }
 };
 
 async function downloadVideo(id) {
     const url = `https://www.youtube.com/watch?v=${id}`;
-    
-    // Hiện card đang tải
     showDownloadCard('loading');
-    showToast("Đang tải bài hát...", "info");
+    showToast("⬇️ Đang tải bài hát...", "info");
     
     try {
         const res = await fetch("download.php", {
             method: "POST",
             body: new URLSearchParams({ query: url })
         });
-        
         const data = await res.json();
         
         if (data.success) {
             document.getElementById("youtubeModal").style.display = "none";
-            
-            // Bắt đầu monitor để kiểm tra trạng thái
             startDownloadMonitor();
-            
         } else {
             showDownloadCard('error');
-            showToast(data.message || "Lỗi tải nhạc", "error");
+            showToast("✗ " + (data.message || "Lỗi tải nhạc"), "error");
         }
-        
     } catch (err) {
         showDownloadCard('error');
-        showToast("Lỗi tải: " + err.message, "error");
+        showToast("✗ Lỗi tải: " + err.message, "error");
     }
 }
