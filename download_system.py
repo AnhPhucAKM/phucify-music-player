@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Auto Download System - Tự động tải nhạc, không cần worker thủ công
-Chỉ 1 process tải tại 1 thời điểm (dùng lock file)
+Auto Download System - Fixed UTF-8 encoding cho tiếng Việt
 """
 
 import os
@@ -16,6 +16,10 @@ import re
 import unicodedata
 import shutil
 
+# Force UTF-8 encoding
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
 BASE_DIR = os.path.dirname(__file__)
 AUDIO_DIR = os.path.join(BASE_DIR, 'audio')
 COVERS_DIR = os.path.join(BASE_DIR, 'covers')
@@ -28,18 +32,26 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 os.makedirs(COVERS_DIR, exist_ok=True)
 
 def clean_filename(name):
-    """Làm sạch tên file - loại bỏ ký tự đặc biệt, giới hạn độ dài"""
-    # Normalize Unicode
-    name = unicodedata.normalize("NFKC", name)
+    """Làm sạch tên file - GIỮ NGUYÊN tiếng Việt, chỉ xóa ký tự không hợp lệ"""
+    # Normalize Unicode về dạng NFC (composed form)
+    name = unicodedata.normalize("NFC", name)
     
-    # Loại bỏ ký tự không hợp lệ
-    name = re.sub(r'[\\/*?:"<>|]', '', name)
-    name = name.replace("/", "-")
+    # Chỉ loại bỏ các ký tự không hợp lệ trong filesystem
+    # GIỮ NGUYÊN: tiếng Việt, chữ cái, số, khoảng trắng, dấu gạch ngang
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '', name)
+    
+    # Trim whitespace
     name = name.strip()
     
-    # Giới hạn độ dài (tránh lỗi filesystem)
-    if len(name) > 200:
-        name = name[:200].strip()
+    # Thay thế nhiều khoảng trắng liên tiếp thành 1
+    name = re.sub(r'\s+', ' ', name)
+    
+    # Giới hạn độ dài (filesystem limit)
+    if len(name.encode('utf-8')) > 200:
+        # Cắt theo bytes để tránh cắt giữa ký tự UTF-8
+        name_bytes = name.encode('utf-8')[:200]
+        # Decode an toàn
+        name = name_bytes.decode('utf-8', errors='ignore').strip()
     
     # Nếu tên rỗng sau khi clean thì dùng timestamp
     if not name:
@@ -48,24 +60,23 @@ def clean_filename(name):
     return name
 
 def set_file_permissions(filepath):
-    """Set quyền phuc:www-data cho file"""
+    """Set quyền cho file"""
     try:
-        # Chỉ chạy trên Linux
         if os.name != 'posix':
             return
         
-        # Set owner thành phuc:www-data
         subprocess.run(
             ['chown', 'phuc:www-data', filepath],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
+            timeout=5
         )
         
-        # Set permissions 664 (rw-rw-r--)
         subprocess.run(
             ['chmod', '664', filepath],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
+            timeout=5
         )
         
         log(f"✓ Set permissions: {os.path.basename(filepath)}")
@@ -74,14 +85,14 @@ def set_file_permissions(filepath):
         log(f"⚠ Cannot set permissions: {str(e)}")
 
 def log(msg):
-    """Ghi log"""
+    """Ghi log với UTF-8 encoding"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{timestamp}] {msg}\n"
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line)
-    except:
-        pass
+    except Exception as e:
+        print(f"Log error: {e}", file=sys.stderr)
     print(msg)
 
 def acquire_lock(lock_fd):
@@ -100,7 +111,7 @@ def release_lock(lock_fd):
         pass
 
 def get_video_info(target):
-    """Lấy thông tin video"""
+    """Lấy thông tin video với UTF-8 encoding"""
     try:
         cmd = [
             "yt-dlp",
@@ -113,7 +124,8 @@ def get_video_info(target):
         result = subprocess.run(
             cmd, 
             capture_output=True, 
-            text=True, 
+            text=True,
+            encoding='utf-8',
             timeout=30
         )
         
@@ -131,7 +143,7 @@ def get_video_info(target):
         return None
 
 def download_thumbnail(video_id, clean_title):
-    """Download thumbnail"""
+    """Download thumbnail với UTF-8 filename"""
     try:
         thumb_path = os.path.join(COVERS_DIR, f"{clean_title}.jpg")
         
@@ -141,13 +153,17 @@ def download_thumbnail(video_id, clean_title):
             set_file_permissions(thumb_path)
             return True
         
+        # Download vào temp file trước
+        temp_name = f"temp_{int(time.time())}"
+        temp_path = os.path.join(COVERS_DIR, temp_name)
+        
         cmd = [
             "yt-dlp",
             "--skip-download",
             "--write-thumbnail",
             "--convert-thumbnails", "jpg",
             "--no-warnings",
-            "-o", os.path.join(COVERS_DIR, f"{clean_title}.%(ext)s"),
+            "-o", f"{temp_path}.%(ext)s",
             f"https://www.youtube.com/watch?v={video_id}"
         ]
         
@@ -158,7 +174,11 @@ def download_thumbnail(video_id, clean_title):
             timeout=30
         )
         
-        if os.path.exists(thumb_path):
+        # Tìm file temp thumbnail
+        temp_jpg = f"{temp_path}.jpg"
+        if os.path.exists(temp_jpg):
+            # Rename thành tên đúng
+            shutil.move(temp_jpg, thumb_path)
             log(f"✓ Thumbnail downloaded: {clean_title}")
             set_file_permissions(thumb_path)
             return True
@@ -171,7 +191,7 @@ def download_thumbnail(video_id, clean_title):
         return False
 
 def download_audio(target, clean_title):
-    """Download audio với tên file đã clean"""
+    """Download audio với UTF-8 filename"""
     try:
         # Tên file output
         audio_path = os.path.join(AUDIO_DIR, f"{clean_title}.mp3")
@@ -183,7 +203,8 @@ def download_audio(target, clean_title):
             return True
         
         # Download vào temp file trước
-        temp_output = os.path.join(AUDIO_DIR, f"temp_{int(time.time())}.%(ext)s")
+        temp_name = f"temp_{int(time.time())}"
+        temp_output = os.path.join(AUDIO_DIR, f"{temp_name}.%(ext)s")
         
         cmd = [
             "yt-dlp",
@@ -209,16 +230,17 @@ def download_audio(target, clean_title):
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            encoding='utf-8'
         )
 
         stdout, stderr = proc.communicate(timeout=300)
 
         # Tìm file temp đã download
-        temp_files = [f for f in os.listdir(AUDIO_DIR) if f.startswith('temp_') and f.endswith('.mp3')]
+        temp_files = [f for f in os.listdir(AUDIO_DIR) if f.startswith(temp_name) and f.endswith('.mp3')]
         
         if proc.returncode == 0 and temp_files:
-            # Rename file temp thành tên đúng
+            # Rename file temp thành tên đúng (UTF-8)
             temp_file = os.path.join(AUDIO_DIR, temp_files[0])
             shutil.move(temp_file, audio_path)
             
@@ -247,7 +269,7 @@ def download_audio(target, clean_title):
         return False
 
 def download(query):
-    """Download với lock để tránh xung đột"""
+    """Download với UTF-8 support"""
     
     # Mở lock file
     lock_fd = open(LOCK_FILE, 'w')
