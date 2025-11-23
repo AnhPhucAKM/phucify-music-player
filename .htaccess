@@ -1,0 +1,45 @@
+# Force UTF-8 cho tất cả text files
+AddDefaultCharset UTF-8
+AddCharset UTF-8 .html .htm .php .css .js .json .txt .xml
+
+# Force UTF-8 cho PHP
+php_value default_charset "UTF-8"
+php_value mbstring.internal_encoding "UTF-8"
+php_value mbstring.http_output "UTF-8"
+
+# Content-Type với UTF-8
+<FilesMatch "\.(html|htm|php)$">
+    Header set Content-Type "text/html; charset=utf-8"
+</FilesMatch>
+
+<FilesMatch "\.(js)$">
+    Header set Content-Type "application/javascript; charset=utf-8"
+</FilesMatch>
+
+<FilesMatch "\.(css)$">
+    Header set Content-Type "text/css; charset=utf-8"
+</FilesMatch>
+
+<FilesMatch "\.(json)$">
+    Header set Content-Type "application/json; charset=utf-8"
+</FilesMatch>
+
+# Cho phép access audio files với UTF-8 filename
+<FilesMatch "\.(mp3|wav|ogg|m4a)$">
+    Header set Content-Type "audio/mpeg; charset=utf-8"
+    Header set Accept-Ranges "bytes"
+</FilesMatch>
+
+# Cho phép access image files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
+    Header set Content-Type "image/jpeg"
+    Header set Accept-Ranges "bytes"
+</FilesMatch>
+
+# Enable mod_rewrite nếu cần
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Không rewrite các file thực tế
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+</IfModule>
