@@ -1,5 +1,5 @@
 <?php
-// functions.php - Fixed UTF-8 with Debug
+// functions.php - Fixed UTF-8 with Audio Path Encoding
 
 // Force UTF-8 encoding
 mb_internal_encoding('UTF-8');
@@ -63,6 +63,12 @@ function getCover($filename) {
     
     // Fallback về default cover
     return 'assets/default.jpg';
+}
+
+// Hàm encode audio path
+function getAudioPath($filename) {
+    // Encode filename cho URL
+    return 'audio/' . rawurlencode($filename);
 }
 
 // Load playlists với UTF-8
