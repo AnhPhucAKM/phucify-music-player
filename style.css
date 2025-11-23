@@ -49,7 +49,6 @@ body {
 }
 .btn:hover { opacity: 0.85; }
 
-/* Playlist */
 .playlist-list {
     margin-top: 20px;
     list-style: none;
@@ -129,7 +128,6 @@ body {
     word-break: break-word;
 }
 
-/* Disk actions - UPDATED */
 .disk-actions {
     position: absolute;
     top: 8px;
@@ -166,7 +164,6 @@ body {
     transform: scale(1.1);
 }
 
-/* Trong playlist: chỉ hiện nút Remove */
 .grid.playlist-active .add-btn {
     display: none;
 }
@@ -590,4 +587,137 @@ body {
 @keyframes scaleUp {
     from { opacity: 0; transform: scale(0.9); }
     to { opacity: 1; transform: scale(1); }
+}
+
+/* ===============================
+   CUSTOM CONFIRM DIALOG
+================================ */
+.confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirm-overlay.show {
+    display: flex;
+}
+
+.confirm-dialog {
+    background: #1a1a1a;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    animation: slideUpDialog 0.3s ease;
+}
+
+.confirm-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.confirm-icon.warning {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 2px solid #e74c3c;
+}
+
+.confirm-icon.info {
+    background: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+    border: 2px solid #3498db;
+}
+
+.confirm-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.confirm-message {
+    font-size: 15px;
+    color: #aaa;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 25px;
+    white-space: pre-line;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-btn.primary {
+    background: #1DB954;
+    color: #000;
+}
+
+.confirm-btn.primary:hover {
+    background: #1ed760;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
+}
+
+.confirm-btn.danger {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.confirm-btn.danger:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+.confirm-btn.secondary {
+    background: #333;
+    color: #fff;
+}
+
+.confirm-btn.secondary:hover {
+    background: #444;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUpDialog {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
