@@ -63,14 +63,19 @@ function showConfirm(options) {
 }
 
 // =============================
-// PLAYER
+// PLAYER - FIXED UTF-8 SUPPORT
 // =============================
 
 function playSong(filename, element = null) {
-    const clean = filename.replace("audio/", "");
+    // Nếu filename đã có prefix "audio/", remove nó
+    const clean = filename.replace(/^audio\//, "");
     const meta = SONGS_META[clean];
 
-    if (!meta) return console.error("Không tìm thấy bài:", clean);
+    if (!meta) {
+        console.error("Không tìm thấy bài:", clean);
+        console.log("Available songs:", Object.keys(SONGS_META));
+        return;
+    }
 
     const indexFound = currentPlaylist.findIndex(s => s.file === clean);
 
@@ -81,8 +86,15 @@ function playSong(filename, element = null) {
         currentIndex = currentPlaylist.length - 1;
     }
 
+    // Set audio source - path đã được encode từ PHP
     audio.src = meta.path;
-    audio.play();
+    
+    // Load và play
+    audio.load();
+    audio.play().catch(err => {
+        console.error("Playback error:", err);
+        showToast("❌ Lỗi phát nhạc: " + err.message, "error");
+    });
 
     document.getElementById("playerTitle").textContent = meta.title;
     document.getElementById("playerCover").src = meta.cover;
@@ -90,6 +102,11 @@ function playSong(filename, element = null) {
 
     document.querySelectorAll('.disk').forEach(d => d.classList.remove('selected'));
     if (element) element.classList.add('selected');
+    else {
+        // Find and select the disk element
+        const diskElement = document.querySelector(`[data-file="${clean}"]`);
+        if (diskElement) diskElement.classList.add('selected');
+    }
 }
 
 function togglePlay() {
@@ -231,7 +248,7 @@ function openAddToPlaylist(file) {
     const container = document.getElementById("playlistChoices");
 
     container.innerHTML = list.map(name => `
-        <label><input type="checkbox" value="${name}"> ${name}</label>
+        <label><input type="checkbox" value="${escapeHtml(name)}"> ${escapeHtml(name)}</label>
     `).join("");
 
     document.getElementById("playlistModal").style.display = "flex";
@@ -328,6 +345,16 @@ async function removeFromPlaylist(file) {
     } else {
         showToast(j.message, "error");
     }
+}
+
+// =============================
+// UTILITIES
+// =============================
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // =============================
@@ -513,12 +540,12 @@ document.getElementById("searchForm").onsubmit = async function (e) {
 
         container.innerHTML = results.map(r => `
             <div class="result-item" onclick="downloadVideo('${r.id}')">
-                <img src="${r.thumbnail}" alt="${r.title}" 
+                <img src="${escapeHtml(r.thumbnail)}" alt="${escapeHtml(r.title)}" 
                      style="width:100%;height:180px;object-fit:cover;border-radius:8px 8px 0 0;"
                      onerror="this.src='https://via.placeholder.com/320x180?text=No+Image'">
                 <div style="padding:12px;">
-                    <p style="font-weight:600;margin-bottom:6px;font-size:14px;line-height:1.4;">${r.title}</p>
-                    <p style="color:#aaa;font-size:12px;">${r.duration || 'N/A'}</p>
+                    <p style="font-weight:600;margin-bottom:6px;font-size:14px;line-height:1.4;">${escapeHtml(r.title)}</p>
+                    <p style="color:#aaa;font-size:12px;">${escapeHtml(r.duration || 'N/A')}</p>
                 </div>
             </div>
         `).join("");
