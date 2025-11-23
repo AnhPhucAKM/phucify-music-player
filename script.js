@@ -486,4 +486,63 @@ async function downloadVideo(id) {
         showDownloadCard('error');
         showToast("Lỗi tải: " + err.message, "error");
     }
+
+}
+// Update hàm removeFromPlaylist
+async function removeFromPlaylist(file) {
+    const active = document.querySelector(".playlist-item.selected");
+    if (!active) return;
+
+    const playlist = active.textContent.split("(")[0].trim();
+    
+    // Nếu đang ở "Tất cả nhạc" → XÓA FILE KHỎI SERVER
+    if (playlist === "Tất cả nhạc") {
+        if (!confirm(`⚠️ XÓA VĨNH VIỄN bài "${file}" khỏi server?\n\nHành động này không thể hoàn tác!`)) {
+            return;
+        }
+        
+        const res = await fetch("delete_file.php", {
+            method: "POST",
+            body: new URLSearchParams({
+                file: file
+            })
+        });
+        
+        const j = await res.json();
+        
+        if (j.success) {
+            showToast("✓ Đã xóa file khỏi server", "success");
+            
+            // Xóa khỏi SONGS_META
+            delete SONGS_META[file];
+            
+            // Reload trang sau 1s
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast("✗ " + (j.message || "Lỗi xóa file"), "error");
+        }
+        
+        return;
+    }
+    
+    // Nếu đang ở playlist khác → CHỈ XÓA KHỎI PLAYLIST
+    if (!confirm(`Xóa "${file}" khỏi playlist "${playlist}"?`)) return;
+
+    const res = await fetch("playlist.php", {
+        method: "POST",
+        body: new URLSearchParams({
+            action: "remove",
+            playlist,
+            file
+        })
+    });
+
+    const j = await res.json();
+    if (j.success) {
+        await reloadPlaylists();
+        loadPlaylist(playlist, active);
+        showToast("✓ Đã xóa khỏi playlist", "success");
+    } else {
+        showToast(j.message, "error");
+    }
 }
